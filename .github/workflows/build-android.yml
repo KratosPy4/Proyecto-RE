@@ -1,63 +1,66 @@
-
 name: Build ReflectionHLE Android APK
 
 on:
-  workflow_dispatch:
-  push:
-    branches: [main, master]
+workflow_dispatch:
+push:
+branches: [main, master]
 
 permissions:
-  contents: read
+contents: read
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - name: Checkout workflow repository
-        uses: actions/checkout@v4
+build:
+runs-on: ubuntu-latest
+timeout-minutes: 45
 
-      - name: Checkout ReflectionHLE
-        uses: actions/checkout@v4
-        with:
-          repository: ReflectionHLE/ReflectionHLE
-          ref: master
-          path: source
+steps:
+  - name: Checkout workflow repository
+    uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+  - name: Checkout ReflectionHLE
+    uses: actions/checkout@v4
+    with:
+      repository: ReflectionHLE/ReflectionHLE
+      ref: master
+      path: source
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+  - name: Set up Java
+    uses: actions/setup-java@v4
+    with:
+      distribution: temurin
+      java-version: '17'
 
-      - name: Install Android tools
-        run: |
-          sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;28.2.13676358" "cmake;3.22.1"
+  - name: Set up Android SDK
+    uses: android-actions/setup-android@v3
 
-      - name: Prepare SDL3
-        run: |
-          git clone --depth 1 --branch release-3.2.30 https://github.com/libsdl-org/SDL.git SDL3
-          MODULE="$GITHUB_WORKSPACE/source/src/android-project/reflectionhle"
-          JNIDIR="$MODULE/jni"
-          mkdir -p "$MODULE/src/main/java/org/libsdl/app"
-          cp -R SDL3/android-project/app/src/main/java/org/libsdl/app/. "$MODULE/src/main/java/org/libsdl/app/"
-          ln -s "$GITHUB_WORKSPACE/SDL3" "$JNIDIR/SDL"
-          ln -s "$GITHUB_WORKSPACE/source" "$JNIDIR/ReflectionHLE"
+  - name: Accept Android SDK licenses
+    run: |
+      yes | sdkmanager --licenses || true
 
-      - name: Build APK
-        working-directory: source/src/android-project
-        run: |
-          chmod +x gradlew
-          ./gradlew --no-daemon :reflectionhle:assembleDebug
+  - name: Install Android tools
+    run: |
+      sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;28.2.13676358" "cmake;3.22.1"
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: reflectionhle-android-debug
-          path: source/src/android-project/reflectionhle/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 14
-          
+  - name: Prepare SDL3
+    run: |
+      git clone --depth 1 --branch release-3.2.30 https://github.com/libsdl-org/SDL.git SDL3
+      MODULE="$GITHUB_WORKSPACE/source/src/android-project/reflectionhle"
+      JNIDIR="$MODULE/jni"
+      mkdir -p "$MODULE/src/main/java/org/libsdl/app"
+      cp -R SDL3/android-project/app/src/main/java/org/libsdl/app/. "$MODULE/src/main/java/org/libsdl/app/"
+      ln -s "$GITHUB_WORKSPACE/SDL3" "$JNIDIR/SDL"
+      ln -s "$GITHUB_WORKSPACE/source" "$JNIDIR/ReflectionHLE"
+
+  - name: Build APK
+    working-directory: source/src/android-project
+    run: |
+      chmod +x gradlew
+      ./gradlew --no-daemon :reflectionhle:assembleDebug
+
+  - name: Upload APK
+    uses: actions/upload-artifact@v4
+    with:
+      name: reflectionhle-android-debug
+      path: source/src/android-project/reflectionhle/build/outputs/apk/debug/*.apk
+      if-no-files-found: error
+      retention-days: 14
